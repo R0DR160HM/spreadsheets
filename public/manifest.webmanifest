@@ -1,6 +1,6 @@
 {
-  "name": "Spreadsheet",
-  "short_name": "Spreadsheet",
+  "name": "Workbooks",
+  "short_name": "Workbooks",
   "description": "Offline-first spreadsheet with rich text, CSV/XLSX support and PDF export.",
   "start_url": "./",
   "scope": "./",
