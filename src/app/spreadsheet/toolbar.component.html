@@ -1,0 +1,219 @@
+﻿@if (titlebar.visible()) {
+  <div class="titlebar-strip" aria-hidden="true"></div>
+}
+<div
+  class="toolbar"
+  role="toolbar"
+  [class.below-titlebar]="titlebar.visible()"
+  [attr.aria-label]="i18n.t('toolbar.label')"
+>
+  <div
+    class="group file-group"
+    role="group"
+    [class.in-titlebar]="titlebar.visible()"
+    [attr.aria-label]="i18n.t('toolbar.fileGroup')"
+  >
+    <div class="menu-host">
+      <button
+        #menuButton
+        type="button"
+        class="btn"
+        aria-haspopup="menu"
+        [attr.aria-expanded]="menuOpen()"
+        (click)="toggleMenu()"
+      >
+        {{ i18n.t('file.menu') }} <span aria-hidden="true">▾</span>
+      </button>
+      @if (menuOpen()) {
+        <div
+          #menu
+          class="menu"
+          role="menu"
+          [style.top.px]="menuPosition().top"
+          [style.left.px]="menuPosition().left"
+          [attr.aria-label]="i18n.t('toolbar.fileGroup')"
+          (keydown)="onMenuKeydown($event)"
+        >
+          <button
+            type="button"
+            class="menu-item"
+            role="menuitem"
+            [disabled]="busy()"
+            (click)="closeMenu(false); newWorkbook()"
+          >
+            {{ i18n.t('file.new') }}
+          </button>
+          <button
+            type="button"
+            class="menu-item"
+            role="menuitem"
+            [disabled]="busy()"
+            (click)="closeMenu(false); fileInput.click()"
+          >
+            {{ i18n.t('file.open') }}
+          </button>
+          @for (format of exporters; track format.id) {
+            <button
+              type="button"
+              class="menu-item"
+              role="menuitem"
+              [disabled]="busy()"
+              (click)="closeMenu(true); save(format.id)"
+            >
+              {{ saveLabel(format.id, format.label) }}
+            </button>
+          }
+        </div>
+      }
+    </div>
+
+    <input
+      #fileInput
+      type="file"
+      class="sr-only"
+      [accept]="accept"
+      (change)="openFile(fileInput)"
+      [attr.aria-label]="i18n.t('file.open')"
+    />
+  </div>
+
+  <div class="group" role="group" [attr.aria-label]="i18n.t('toolbar.formatGroup')">
+    <button
+      type="button"
+      class="btn fmt fmt-b"
+      [class.active]="boldActive()"
+      [attr.aria-pressed]="boldActive()"
+      [attr.aria-label]="i18n.t('format.bold')"
+      [title]="i18n.t('format.bold')"
+      (mousedown)="keepFocus($event)"
+      (click)="toggle('bold')"
+    >
+      B
+    </button>
+    <button
+      type="button"
+      class="btn fmt fmt-i"
+      [class.active]="italicActive()"
+      [attr.aria-pressed]="italicActive()"
+      [attr.aria-label]="i18n.t('format.italic')"
+      [title]="i18n.t('format.italic')"
+      (mousedown)="keepFocus($event)"
+      (click)="toggle('italic')"
+    >
+      I
+    </button>
+    <button
+      type="button"
+      class="btn fmt fmt-u"
+      [class.active]="underlineActive()"
+      [attr.aria-pressed]="underlineActive()"
+      [attr.aria-label]="i18n.t('format.underline')"
+      [title]="i18n.t('format.underline')"
+      (mousedown)="keepFocus($event)"
+      (click)="toggle('underline')"
+    >
+      U
+    </button>
+    <button
+      type="button"
+      class="btn fmt fmt-s"
+      [class.active]="strikeActive()"
+      [attr.aria-pressed]="strikeActive()"
+      [attr.aria-label]="i18n.t('format.strike')"
+      [title]="i18n.t('format.strike')"
+      (mousedown)="keepFocus($event)"
+      (click)="toggle('strike')"
+    >
+      S
+    </button>
+
+    <label class="color-field" [title]="i18n.t('format.textColor')">
+      <span class="sr-only">{{ i18n.t('format.textColor') }}</span>
+      <span aria-hidden="true" class="color-glyph">A</span>
+      <input
+        type="color"
+        [value]="textColor()"
+        (mousedown)="keepFocus($event)"
+        (change)="setTextColor($any($event.target).value)"
+      />
+    </label>
+
+    <label class="color-field" [title]="i18n.t('format.fillColor')">
+      <span class="sr-only">{{ i18n.t('format.fillColor') }}</span>
+      <span aria-hidden="true" class="color-glyph fill-glyph"></span>
+      <input type="color" [value]="fillColor()" (change)="setFillColor($any($event.target).value)" />
+    </label>
+
+    <label class="size-field">
+      <span class="sr-only">{{ i18n.t('format.fontSize') }}</span>
+      <select
+        class="size-select"
+        [value]="fontSize()"
+        (mousedown)="keepFocus($event)"
+        (change)="setFontSize($any($event.target).value)"
+        [title]="i18n.t('format.fontSize')"
+      >
+        @for (size of fontSizes; track size) {
+          <option [value]="size" [selected]="size === fontSize()">{{ size }}</option>
+        }
+      </select>
+    </label>
+
+    <button
+      type="button"
+      class="btn fmt"
+      [class.active]="align() === 'left'"
+      [attr.aria-pressed]="align() === 'left'"
+      [attr.aria-label]="i18n.t('format.alignLeft')"
+      [title]="i18n.t('format.alignLeft')"
+      (click)="setAlign('left')"
+    >
+      <span aria-hidden="true">⇤</span>
+    </button>
+    <button
+      type="button"
+      class="btn fmt"
+      [class.active]="align() === 'center'"
+      [attr.aria-pressed]="align() === 'center'"
+      [attr.aria-label]="i18n.t('format.alignCenter')"
+      [title]="i18n.t('format.alignCenter')"
+      (click)="setAlign('center')"
+    >
+      <span aria-hidden="true">↔</span>
+    </button>
+    <button
+      type="button"
+      class="btn fmt"
+      [class.active]="align() === 'right'"
+      [attr.aria-pressed]="align() === 'right'"
+      [attr.aria-label]="i18n.t('format.alignRight')"
+      [title]="i18n.t('format.alignRight')"
+      (click)="setAlign('right')"
+    >
+      <span aria-hidden="true">⇥</span>
+    </button>
+  </div>
+
+  <div class="group" role="group" [attr.aria-label]="i18n.t('grid.label')">
+    <button type="button" class="btn" (click)="store.insertRowBelow()">
+      {{ i18n.t('grid.addRow') }}
+    </button>
+    <button type="button" class="btn" (click)="store.insertColumnRight()">
+      {{ i18n.t('grid.addColumn') }}
+    </button>
+  </div>
+
+  @if (error(); as message) {
+    <p class="error" role="alert">{{ message }}</p>
+  }
+
+  @if (optionsRequest(); as request) {
+    <app-format-options-dialog
+      [options]="request.options"
+      [titleKey]="request.titleKey"
+      [askName]="request.askName"
+      [defaultName]="store.workbook().name"
+      (closed)="onOptionsDialogClosed($event)"
+    />
+  }
+</div>

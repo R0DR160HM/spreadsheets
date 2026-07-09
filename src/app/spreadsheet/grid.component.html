@@ -1,0 +1,73 @@
+<div
+  #scroller
+  class="scroller"
+  (keydown)="onKeydown($event)"
+  (mousedown)="onGridMouseDown($event)"
+  (mouseover)="onGridMouseOver($event)"
+  (dblclick)="onGridDoubleClick($event)"
+>
+  <table
+    role="grid"
+    class="sheet-table"
+    [style.width.px]="tableWidthPx()"
+    [attr.aria-label]="i18n.t('grid.label')"
+  >
+    <thead>
+      <tr>
+        <th class="corner" scope="col"><span class="sr-only">{{ i18n.t('grid.label') }}</span></th>
+        @for (c of cols(); track c) {
+          <th
+            class="col-header"
+            scope="col"
+            [style.width.px]="colWidth(c)"
+            [style.minWidth.px]="colWidth(c)"
+            [attr.aria-label]="i18n.t('grid.columnHeader', { col: columnName(c) })"
+          >
+            {{ columnName(c) }}
+            <div
+              class="col-resize"
+              role="separator"
+              tabindex="0"
+              aria-orientation="vertical"
+              [attr.aria-label]="i18n.t('grid.resizeColumn', { col: columnName(c) })"
+              [attr.aria-valuenow]="colWidth(c)"
+              (pointerdown)="startResize(c, $event)"
+              (pointermove)="onResizeMove($event)"
+              (pointerup)="endResize()"
+              (pointercancel)="endResize()"
+              (keydown)="onResizeKeydown(c, $event)"
+            ></div>
+          </th>
+        }
+      </tr>
+    </thead>
+    <tbody>
+      @for (r of rows(); track r) {
+        <tr
+          app-grid-row
+          [row]="r"
+          [colCount]="colCount()"
+          [cells]="store.activeCells()"
+          [evaluated]="store.evaluated()"
+          [selectedCol]="selectedColFor(r)"
+          [editingCol]="editingColFor(r)"
+          [rangeStart]="rangeStartFor(r)"
+          [rangeEnd]="rangeEndFor(r)"
+          [editSeed]="editingColFor(r) >= 0 ? editSeed() : null"
+          [editorLabel]="editingColFor(r) >= 0 ? editorLabel() : ''"
+          (committed)="onCommit($event)"
+          (cancelled)="onCancel()"
+        ></tr>
+      }
+    </tbody>
+  </table>
+</div>
+@if (resizeGuide(); as guide) {
+  <div
+    class="resize-guide"
+    aria-hidden="true"
+    [style.left.px]="guide.x"
+    [style.top.px]="guide.top"
+    [style.height.px]="guide.height"
+  ></div>
+}

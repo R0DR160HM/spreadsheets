@@ -1,0 +1,93 @@
+/* Fill the shell's leftover height so the sheet-tabs bar stays pinned to the
+   viewport bottom; min-height 0 lets the scroller shrink below the table's
+   natural height instead of pushing the layout past the fold. */
+:host {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.scroller {
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+  background: #ffffff;
+}
+
+/* Note: class names must not collide with Tailwind utilities (e.g. `grid`) */
+.sheet-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+}
+
+.col-header,
+.corner {
+  position: sticky;
+  top: 0;
+  background: #f1f5f9;
+  color: #334155;
+  font-weight: 600;
+  font-size: 0.75rem;
+  border: 1px solid #cbd5e1;
+  padding: 0.125rem 0.25rem;
+  z-index: 3;
+  touch-action: manipulation;
+}
+
+.corner {
+  left: 0;
+  z-index: 4;
+  width: 3rem;
+  min-width: 3rem;
+}
+
+.col-resize {
+  /* Kept fully inside the sticky header: the next header's stacking context
+     would paint over anything protruding past the cell edge. */
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 7px;
+  height: 100%;
+  z-index: 4;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.col-resize:focus-visible {
+  outline: 2px solid #1d4ed8;
+  outline-offset: -1px;
+  background: #93c5fd;
+}
+
+.col-resize:hover {
+  background: #93c5fd;
+}
+
+@media (pointer: coarse) {
+  .col-resize {
+    width: 14px;
+  }
+}
+
+.resize-guide {
+  position: fixed;
+  width: 2px;
+  background: #1d4ed8;
+  z-index: 50;
+  pointer-events: none;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

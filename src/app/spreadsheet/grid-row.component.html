@@ -1,0 +1,55 @@
+<th
+  class="row-header"
+  scope="row"
+  [attr.aria-label]="i18n.t('grid.rowHeader', { row: row() + 1 })"
+>
+  {{ row() + 1 }}
+</th>
+@for (c of cols(); track c) {
+  <td
+    class="cell"
+    [class.selected]="c === selectedCol()"
+    [class.in-range]="inRange(c)"
+    [attr.data-cell]="row() + ':' + c"
+    [attr.tabindex]="c === selectedCol() ? 0 : -1"
+    [attr.aria-selected]="inRange(c)"
+    [style.background]="cellAt(c)?.style?.background ?? null"
+    [style.textAlign]="cellAt(c)?.style?.align ?? null"
+  >
+    @if (c === editingCol()) {
+      <app-cell-editor
+        [runs]="cellAt(c)?.runs ?? []"
+        [initialText]="editSeed()"
+        [label]="editorLabel()"
+        (committed)="committed.emit($event)"
+        (cancelled)="cancelled.emit()"
+      />
+    } @else if (formulaResult(c); as result) {
+      <span class="content">
+        @if (cellAt(c)?.runs?.[0]; as style) {
+          <span
+            [style.fontWeight]="style.bold ? 'bold' : null"
+            [style.fontStyle]="style.italic ? 'italic' : null"
+            [style.textDecoration]="textDecoration(style)"
+            [style.color]="style.color ?? null"
+            [style.fontSize.pt]="style.fontSize ?? null"
+            >{{ result }}</span
+          >
+        }
+      </span>
+    } @else {
+      <span class="content">
+        @for (run of cellAt(c)?.runs ?? []; track $index) {
+          <span
+            [style.fontWeight]="run.bold ? 'bold' : null"
+            [style.fontStyle]="run.italic ? 'italic' : null"
+            [style.textDecoration]="textDecoration(run)"
+            [style.color]="run.color ?? null"
+            [style.fontSize.pt]="run.fontSize ?? null"
+            >{{ run.text }}</span
+          >
+        }
+      </span>
+    }
+  </td>
+}
