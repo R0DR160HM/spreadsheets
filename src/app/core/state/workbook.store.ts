@@ -4,6 +4,7 @@ import {
   Cell,
   cellKey,
   CellStyle,
+  cellText,
   createSheet,
   createWorkbook,
   isEmptyCell,
@@ -21,6 +22,8 @@ export interface CellRef {
   row: number;
   col: number;
 }
+
+export type SortDirection = 'asc' | 'desc';
 
 /** Normalized rectangular selection (inclusive bounds). */
 export interface CellRange {
@@ -308,6 +311,35 @@ export class WorkbookStore {
     });
   }
 
+  /**
+   * Reorders entire rows by the display value of the given column. Numbers
+   * compare numerically and sort before text; rows with an empty cell in the
+   * column always sink to the bottom, whatever the direction. Formula cells
+   * sort by their current evaluated value (references are not rewritten).
+   */
+  sortByColumn(col: number, direction: SortDirection): void {
+    this.snapshot();
+    const evaluated = this.evaluated();
+    this.updateSheet((sheet) => {
+      const keyText = (row: number): string => {
+        const key = cellKey(row, col);
+        return evaluated.get(key) ?? cellText(sheet.cells.get(key));
+      };
+      const texts = Array.from({ length: sheet.rowCount }, (_, r) => keyText(r));
+      const order = texts
+        .map((_, r) => r)
+        .sort((a, b) => compareCellText(texts[a], texts[b], direction) || a - b);
+      const rowTarget = new Map<number, number>();
+      order.forEach((oldRow, newRow) => rowTarget.set(oldRow, newRow));
+      const cells = new Map<string, Cell>();
+      for (const [key, cell] of sheet.cells) {
+        const [r, c] = key.split(':').map(Number);
+        cells.set(cellKey(rowTarget.get(r) ?? r, c), cell);
+      }
+      return { ...sheet, cells };
+    });
+  }
+
   addSheet(): void {
     this.snapshot();
     this.workbookSignal.update((wb) => {
@@ -376,4 +408,22 @@ function sameRef(a: CellRef, b: CellRef): boolean {
 
 function clampWidth(width: number): number {
   return Math.max(MIN_COL_WIDTH_PX, Math.min(width, MAX_COL_WIDTH_PX));
+}
+
+/** Empty last in both directions; numbers before text ascending; text is locale-compared. */
+function compareCellText(a: string, b: string, direction: SortDirection): number {
+  if (a === '' || b === '') return (a === '' ? 1 : 0) - (b === '' ? 1 : 0);
+  const numA = Number(a);
+  const numB = Number(b);
+  const aIsNum = a.trim() !== '' && !Number.isNaN(numA);
+  const bIsNum = b.trim() !== '' && !Number.isNaN(numB);
+  let cmp: number;
+  if (aIsNum && bIsNum) {
+    cmp = numA - numB;
+  } else if (aIsNum !== bIsNum) {
+    cmp = aIsNum ? -1 : 1;
+  } else {
+    cmp = a.localeCompare(b, undefined, { sensitivity: 'base', numeric: true });
+  }
+  return direction === 'asc' ? cmp : -cmp;
 }

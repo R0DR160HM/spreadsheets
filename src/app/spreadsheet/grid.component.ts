@@ -14,12 +14,13 @@ import { EditorCommandsService } from '../core/richtext/editor-commands.service'
 import {
   Cell,
   cellKey,
+  cellText,
   columnName,
   DEFAULT_COL_WIDTH_PX,
   MAX_COL_WIDTH_PX,
   MIN_COL_WIDTH_PX,
 } from '../core/model/workbook.model';
-import { CellRef, WorkbookStore } from '../core/state/workbook.store';
+import { CellRef, SortDirection, WorkbookStore } from '../core/state/workbook.store';
 import { CommitMove, EditorCommit } from './cell-editor.component';
 import { GridRowComponent } from './grid-row.component';
 
@@ -73,10 +74,21 @@ export class GridComponent {
     null,
   );
 
+  /** Cell map produced by the last sort — anything else invalidates the indicator. */
+  private cellsWhenSorted: ReadonlyMap<string, Cell> | null = null;
+
   constructor() {
     // The store can end editing on its own (sheet switch, file open, undo).
     effect(() => {
       if (!this.store.editing()) this.editingCell.set(null);
+    });
+    // Any content change not caused by the sort itself (edit, undo, sheet
+    // switch, file open) makes the sort indicator stale — drop it.
+    effect(() => {
+      if (this.store.activeCells() !== this.cellsWhenSorted) {
+        this.sortState.set(null);
+        this.cellsWhenSorted = null;
+      }
     });
   }
 
@@ -89,6 +101,47 @@ export class GridComponent {
   protected readonly colCount = computed(() => this.store.activeSheet().colCount);
 
   protected readonly columnName = columnName;
+
+  // ---- Sorting ----
+
+  /** Last sort applied to the active sheet; drives the header indicator and aria-sort. */
+  protected readonly sortState = signal<{ col: number; direction: SortDirection } | null>(null);
+
+  /** Columns holding at least one non-empty value — only those offer a sort button. */
+  protected readonly sortableCols = computed<ReadonlySet<number>>(() => {
+    const cols = new Set<number>();
+    for (const [key, cell] of this.store.activeCells()) {
+      if (cellText(cell) !== '') cols.add(Number(key.split(':')[1]));
+    }
+    return cols;
+  });
+
+  protected onSortClick(col: number): void {
+    const current = this.sortState();
+    const direction: SortDirection =
+      current?.col === col && current.direction === 'asc' ? 'desc' : 'asc';
+    this.store.sortByColumn(col, direction);
+    this.cellsWhenSorted = this.store.activeCells();
+    this.sortState.set({ col, direction });
+  }
+
+  protected ariaSortFor(col: number): 'ascending' | 'descending' | null {
+    const state = this.sortState();
+    if (state?.col !== col) return null;
+    return state.direction === 'asc' ? 'ascending' : 'descending';
+  }
+
+  /** Label announces the action the button will perform next. */
+  protected sortLabelFor(col: number): string {
+    const state = this.sortState();
+    const key = state?.col === col && state.direction === 'asc' ? 'grid.sortDesc' : 'grid.sortAsc';
+    return this.i18n.t(key, { col: columnName(col) });
+  }
+
+  protected sortDirectionFor(col: number): SortDirection | null {
+    const state = this.sortState();
+    return state?.col === col ? state.direction : null;
+  }
 
   protected colWidth(col: number): number {
     return this.store.activeSheet().colWidths[col] ?? DEFAULT_COL_WIDTH_PX;

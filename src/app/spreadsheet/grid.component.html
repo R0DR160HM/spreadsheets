@@ -22,8 +22,25 @@
             [style.width.px]="colWidth(c)"
             [style.minWidth.px]="colWidth(c)"
             [attr.aria-label]="i18n.t('grid.columnHeader', { col: columnName(c) })"
+            [attr.aria-sort]="ariaSortFor(c)"
           >
             {{ columnName(c) }}
+            @if (sortableCols().has(c)) {
+              <button
+                type="button"
+                class="sort-btn"
+                [class.sort-active]="ariaSortFor(c) !== null"
+                [attr.aria-label]="sortLabelFor(c)"
+                (click)="onSortClick(c)"
+              >
+                @if (sortDirectionFor(c) !== 'desc') {
+                  <span class="chevron chevron-up" aria-hidden="true"></span>
+                }
+                @if (sortDirectionFor(c) !== 'asc') {
+                  <span class="chevron chevron-down" aria-hidden="true"></span>
+                }
+              </button>
+            }
             <div
               class="col-resize"
               role="separator"

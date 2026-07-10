@@ -174,6 +174,68 @@ describe('WorkbookStore', () => {
     expect(cellText(store.activeSheet().cells.get(cellKey(2, 0)))).toBe('below');
   });
 
+  describe('sortByColumn', () => {
+    const textAt = (row: number, col: number) =>
+      cellText(store.activeSheet().cells.get(cellKey(row, col)));
+
+    it('sorts whole rows by a column, ascending and descending', () => {
+      store.setCell(0, 0, { runs: [{ text: 'banana' }] });
+      store.setCell(0, 1, { runs: [{ text: 'yellow' }] });
+      store.setCell(1, 0, { runs: [{ text: 'apple' }] });
+      store.setCell(1, 1, { runs: [{ text: 'red' }] });
+
+      store.sortByColumn(0, 'asc');
+      expect(textAt(0, 0)).toBe('apple');
+      expect(textAt(0, 1)).toBe('red'); // the row moved as a unit
+      expect(textAt(1, 0)).toBe('banana');
+
+      store.sortByColumn(0, 'desc');
+      expect(textAt(0, 0)).toBe('banana');
+      expect(textAt(1, 0)).toBe('apple');
+      expect(textAt(1, 1)).toBe('red');
+    });
+
+    it('compares numbers numerically and places them before text', () => {
+      store.setCell(0, 0, { runs: [{ text: 'text' }] });
+      store.setCell(1, 0, { runs: [{ text: '10' }] });
+      store.setCell(2, 0, { runs: [{ text: '9' }] });
+
+      store.sortByColumn(0, 'asc');
+      expect(textAt(0, 0)).toBe('9');
+      expect(textAt(1, 0)).toBe('10');
+      expect(textAt(2, 0)).toBe('text');
+    });
+
+    it('keeps rows with an empty sort cell at the bottom in both directions', () => {
+      store.setCell(0, 1, { runs: [{ text: 'no value in sort column' }] });
+      store.setCell(1, 0, { runs: [{ text: 'b' }] });
+      store.setCell(2, 0, { runs: [{ text: 'a' }] });
+
+      store.sortByColumn(0, 'desc');
+      expect(textAt(0, 0)).toBe('b');
+      expect(textAt(1, 0)).toBe('a');
+      expect(textAt(2, 1)).toBe('no value in sort column');
+    });
+
+    it('sorts formula cells by their evaluated value', () => {
+      store.setCell(0, 0, { runs: [{ text: '=2+3' }] }); // 5
+      store.setCell(1, 0, { runs: [{ text: '1' }] });
+
+      store.sortByColumn(0, 'asc');
+      expect(textAt(0, 0)).toBe('1');
+      expect(textAt(1, 0)).toBe('=2+3');
+    });
+
+    it('is a single undo step', () => {
+      store.setCell(0, 0, { runs: [{ text: 'b' }] });
+      store.setCell(1, 0, { runs: [{ text: 'a' }] });
+      store.sortByColumn(0, 'asc');
+      expect(textAt(0, 0)).toBe('a');
+      store.undo();
+      expect(textAt(0, 0)).toBe('b');
+    });
+  });
+
   it('inserts a column right of the selection, shifting content and widths right', () => {
     store.setCell(0, 0, { runs: [{ text: 'left' }] });
     store.setCell(0, 1, { runs: [{ text: 'right' }] });
