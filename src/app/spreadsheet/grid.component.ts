@@ -226,23 +226,42 @@ export class GridComponent {
     this.dragSelecting = false;
   }
 
-  /** App-wide undo/redo — skipped inside text inputs and the cell editor, where native undo applies. */
+  /**
+   * App-wide Ctrl/Cmd shortcuts (undo/redo, select-all, copy). Each is skipped
+   * inside a text input or the cell editor, where the native behavior applies —
+   * so Ctrl+A selects text and Ctrl+C copies text while editing, but act on the
+   * grid's cells when only a cell is selected.
+   */
   protected onGlobalKeydown(event: KeyboardEvent): void {
     if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
     const key = event.key.toLowerCase();
+    const target = event.target;
+    const inTextField =
+      target instanceof Element &&
+      target.closest('input, textarea, select, [contenteditable]') !== null;
+
     const isUndo = key === 'z' && !event.shiftKey;
     const isRedo = key === 'y' || (key === 'z' && event.shiftKey);
-    if (!isUndo && !isRedo) return;
-    const target = event.target;
-    if (
-      target instanceof Element &&
-      target.closest('input, textarea, select, [contenteditable]')
-    ) {
+    if (isUndo || isRedo) {
+      if (inTextField) return;
+      event.preventDefault();
+      if (isUndo) this.store.undo();
+      else this.store.redo();
       return;
     }
-    event.preventDefault();
-    if (isUndo) this.store.undo();
-    else this.store.redo();
+
+    if (inTextField || this.store.editing()) return;
+
+    if (key === 'a') {
+      event.preventDefault();
+      this.store.selectAll();
+      this.focusSelectedCell();
+    } else if (key === 'c') {
+      event.preventDefault();
+      // Clipboard writes can reject (denied permission, non-secure context) —
+      // swallow it rather than surfacing an unhandled rejection.
+      void navigator.clipboard?.writeText(this.store.selectionText()).catch(() => {});
+    }
   }
 
   // ---- Keyboard ----

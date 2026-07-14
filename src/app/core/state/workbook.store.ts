@@ -168,6 +168,36 @@ export class WorkbookStore {
     if (!sameRef(this.selection(), ref)) this.selection.set(ref);
   }
 
+  /**
+   * Selects every cell in the active sheet. The active cell stays at the
+   * top-left corner (anchor at the bottom-right) so focus doesn't scroll the
+   * viewport to the far edge of the sheet.
+   */
+  selectAll(): void {
+    const sheet = this.activeSheet();
+    this.selection.set({ row: 0, col: 0 });
+    this.anchor.set({ row: sheet.rowCount - 1, col: sheet.colCount - 1 });
+  }
+
+  /**
+   * Plain, unformatted text of the current selection as TSV: cells in a row
+   * joined by tabs, rows by newlines. A single-cell selection yields just that
+   * cell's text.
+   */
+  selectionText(): string {
+    const { r1, r2, c1, c2 } = this.range();
+    const cells = this.activeSheet().cells;
+    const lines: string[] = [];
+    for (let r = r1; r <= r2; r++) {
+      const cols: string[] = [];
+      for (let c = c1; c <= c2; c++) {
+        cols.push(cellText(cells.get(cellKey(r, c))));
+      }
+      lines.push(cols.join('\t'));
+    }
+    return lines.join('\n');
+  }
+
   setCell(row: number, col: number, cell: Cell): void {
     this.snapshot();
     this.updateSheet((sheet) => {
